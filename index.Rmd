@@ -1,36 +1,87 @@
 ---
-title: "Vibe Checking Spotify Mood Data"
+title: "The Accuracy of Spotify Mood Data Across Music Cultures"
 output: 
   flexdashboard::flex_dashboard:
     orientation: columns
     vertical_layout: fill
+    theme: united
 ---
 
 ```{r setup, include=FALSE}
 library(flexdashboard)
+library(htmlwidgets)
+library(tidyverse)
+library(spotifyr)
+library(plotly)
+
+survey_songs <-
+  get_playlist_audio_features("", "70RrIIkKSiARJwyQXUv30k?si=32f52496041844c4")
+
+survey_songs$culture = c(rep("India", 5), rep("China", 5), rep("Arab", 5), rep("Western", 8))
+survey_songs$modernity = c(rep("Traditional", 2), rep("Contemporary", 3), rep("Traditional", 3), rep("Contemporary", 2), rep("Traditional", 3), rep("Contemporary", 2), rep("Traditional", 3), rep("Contemporary", 5))
+
 ```
 
-Column {data-width=650}
+Results
+=======
+
+Column {.sidebar data-width=300}
+-----------------------------------------------------------------------
+### Overview
+
+Column
+-----------------------------------------------------------------------
+### Mood Data Differences {data-height=650}
+Big chart showing if there is a significant difference in the accuracy of Spotify's mood data for Western and Non-Western styles of music (soon)
+
+<!-- ### Western vs. Non-Western -->
+
+<!-- ### Four Regions -->
+
+### Magic extra space
+Whatever could go here??? We'll see :))
+
+
+Column
+-----------------------------------------------------------------------
+### Regional Response Differences {data-height=450}
+World map coming soon!
+
+### Even more magic extra space
+o.o
+
+
+Background
+==========
+Column {data-width=200}
+-----------------------------------------------------------------------
+<iframe style="border-radius:12px; padding-right:8px; padding-bottom:8px" src="https://open.spotify.com/embed/playlist/70RrIIkKSiARJwyQXUv30k?utm_source=generator&theme=0" width="100%" height="100%" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+
+
+Column
 -----------------------------------------------------------------------
 
-### Chart A
+### Background Information
 
-```{r}
+### Discussion
 
-```
 
-Column {data-width=350}
+Column
 -----------------------------------------------------------------------
 
-### Chart B
+### Spotify Mood Data
+
 
 ```{r}
+p <- survey_songs |> 
+  ggplot(aes(x = valence, y = energy, color = culture, shape = modernity, label = track.name)) + 
+  xlim(0,1) + ylim(0,1) +
+  geom_point(size=3) +
+  geom_text(hjust=.5, vjust=-2.2)
 
+ggplotly(p)
 ```
 
-### Chart C
+<!-- ![The valence-energy plot for all songs used in the survey as retrieved from Spotify (Dec 2023)](songSelectionVA.png) -->
 
-```{r}
-
-```
-
+### Bibliography
