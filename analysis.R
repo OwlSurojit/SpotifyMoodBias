@@ -27,7 +27,7 @@ filtered_data$ME3_Valence <- filtered_data$ME3_Valence - 5
 
 # rescale 1..7 onto 0..1
 scaled_data <- (filtered_data - 1) / 6
-  
+
 
 means <- sapply(scaled_data, mean, na.rm=TRUE)
 sds <- sapply(scaled_data, sd, na.rm=TRUE)
@@ -86,14 +86,117 @@ colnames(dists_by_modernity) <- c("Valence Diff.", "Energy Diff.")
 rownames(dists_by_modernity) <- c("Traditional", "Contemporary")
 
 dists_by_modernity_and_culture <- calc_means_per_style(list(dist_V, dist_E),
-  list(intersect(Indian, Traditional), intersect(Indian, Contemporary),
-       intersect(Chinese, Traditional), intersect(Chinese, Contemporary),
-       intersect(Arab, Traditional), intersect(Arab, Contemporary),
-       intersect(Western, Traditional), intersect(Western, Contemporary)))
+                                                       list(intersect(Indian, Traditional), intersect(Indian, Contemporary),
+                                                            intersect(Chinese, Traditional), intersect(Chinese, Contemporary),
+                                                            intersect(Arab, Traditional), intersect(Arab, Contemporary),
+                                                            intersect(Western, Traditional), intersect(Western, Contemporary)))
 colnames(dists_by_modernity_and_culture) <- c("Valence Diff.", "Energy Diff.")
 rownames(dists_by_modernity_and_culture) <- c("Indian Traditional",  "Indian Contemporary",
                                               "Chinese Traditional", "Chinese Contemporary",
                                               "Arab Traditional",    "Arab Contemporary",
                                               "Western Traditional", "Western Contemporary")
-  
-  
+
+## statistical analysis
+
+## Data frame
+# track name
+track_names <- rep(spotify_data$track.name, each = total_responses)
+
+# Valence and Energy - human ratings
+V_range <- seq(1,46,by=2)
+E_range <- seq(2,46,by=2)
+
+scaled_data_V <- scaled_data[,V_range]
+scaled_data_E <- scaled_data[,E_range]
+
+Valence_human <- data.frame(unlist(scaled_data_V))[,1]
+Energy_human <- data.frame(unlist(scaled_data_E))[,1]
+
+# region
+Indian <- 1:5
+Chinese <- 6:10
+Arab <- 11:15
+Western <- 16:23
+
+regions <- c("Indian", "Chinese", "Arab", "Western")
+region <- c(rep(regions, each = 5*total_responses), rep("Western", each = 3*total_responses))
+
+# western / non-western
+West_non_west <- c(rep("non-Western", each = 3*5*total_responses), rep("Western", each = 8*total_responses))
+
+# traditional / contemporary
+Traditional <- c(1:2, 6:8, 11:13, 16:18)
+Contemporary <- c(3:5, 9:10, 14:15, 19:23)
+tc1
+tc1 <- character()
+tc1[Traditional] <- "traditional"
+tc1[Contemporary] <- "contemporary"
+
+traditional_contemporary <- rep(tc1, each = total_responses)
+
+# spotify rating
+Valence_spotify <- rep(spotify_data$valence, each = total_responses)
+Energy_spotify <- rep(spotify_data$energy, each = total_responses)
+
+# distance
+Valence_distance <- Valence_spotify - Valence_human
+Energy_distance <- Energy_spotify - Energy_human
+
+Valence_distance_abs <- abs(Valence_distance)
+Energy_distance_abs <- abs(Energy_distance)
+
+
+# dataframe
+big_data <- data.frame(track_names, Valence_distance, Energy_distance, Valence_distance_abs, Energy_distance_abs, region, West_non_west, traditional_contemporary, Valence_human, Energy_human, Valence_spotify, Energy_spotify)
+
+## Analysis
+## Absolute distance values
+# Valence: two way ANOVA: region x tradition
+ANOVA_V1 <- aov(Valence_distance_abs ~ region * traditional_contemporary,
+                data = big_data)
+summary(ANOVA_V1)
+
+# Energy: two way ANOVA: region x tradition
+ANOVA_E1 <- aov(Energy_distance_abs ~ region * traditional_contemporary,
+                data = big_data)
+summary(ANOVA_E1)
+
+# Valence: two-way ANOVA: west/nonwest x tradition
+ANOVA_V2 <- aov(Valence_distance_abs ~ West_non_west * traditional_contemporary,
+                data = big_data)
+summary(ANOVA_V2)
+
+# Energy: two way ANOVA: west/nonwest x tradition
+ANOVA_E2 <- aov(Energy_distance_abs ~ West_non_west * traditional_contemporary,
+                data = big_data)
+summary(ANOVA_E2)
+
+# Valence: ANOVA: region
+ANOVA_V3 <- aov(Valence_distance_abs ~ region,
+                data = big_data)
+summary(ANOVA_V3)
+
+# Energy: ANOVA: region
+ANOVA_E3 <- aov(Energy_distance_abs ~ region,
+                data = big_data)
+summary(ANOVA_E3)
+
+# Energy: follow-up pairwise t-tests
+install.packages("rstatix")
+library("rstatix")
+pairwise_t_test(Energy_distance_abs ~ region,
+                data = big_data,
+                p.adjust.method = "bonferroni")
+
+# Valence: t-test: west/non-west
+t.test(Valence_distance_abs ~ West_non_west, data = big_data)
+
+# Energy: t-test: west/non-west
+t.test(Energy_distance_abs ~ West_non_west, data = big_data)
+
+# Valence: t-test: tradition
+t.test(Valence_distance_abs ~ traditional_contemporary, data = big_data)
+
+# Energy: t-test: tradition
+t.test(Energy_distance_abs ~ traditional_contemporary, data = big_data)
+
