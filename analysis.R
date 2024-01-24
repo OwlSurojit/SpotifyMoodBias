@@ -127,7 +127,7 @@ West_non_west <- c(rep("non-Western", each = 3*5*total_responses), rep("Western"
 # traditional / contemporary
 Traditional <- c(1:2, 6:8, 11:13, 16:18)
 Contemporary <- c(3:5, 9:10, 14:15, 19:23)
-tc1
+
 tc1 <- character()
 tc1[Traditional] <- "traditional"
 tc1[Contemporary] <- "contemporary"

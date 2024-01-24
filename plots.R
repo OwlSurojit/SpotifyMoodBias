@@ -36,11 +36,17 @@ responses_with_country <- data[data$Consent.Question == 1,][, c(12,rating_column
   mutate(across(rating_columns - 11, as.numeric)) |>
   filter(rowSums(!is.na(across(rating_columns - 11))) > 0)
 
-responses_with_country <- data.frame(country = responses_with_country$country, scaled_data)[responses_with_country$country != "",]
+responses_with_country <- data.frame(responses_with_country[1], scaled_data)[responses_with_country$country != "",]
 
 means_by_country <- responses_with_country |> 
   group_by(country) |> 
-  summarise(count=n(), across(everything(), \(x) mean(x, na.rm=T)))
+  summarise(response.count=n(), across(everything(), \(x) mean(x, na.rm=T)))
+
+# Some countries are named differently in the spdf used below
+misnamed_countries <- c("Iran", "Russian Federation", "United Kingdom of Great Britain and Northern Ireland", "United States of America")
+corrected_country_names <- c("Iran (Islamic Republic of)", "Russia", "United Kingdom", "United States")
+
+means_by_country$country <- replace(means_by_country$country, means_by_country$country %in% misnamed_countries, corrected_country_names)
 
 spotify_data_coerced = c(rbind(spotify_data$valence, spotify_data$energy))
 
@@ -49,21 +55,21 @@ dists_by_country[,rating_columns-10] <- -sweep(dists_by_country[,rating_columns-
 
 
 dists_by_country_and_culture <- data.frame(dists_by_country[1:2],
-    Indian.Valence  = rowMeans(dists_by_country[Indian*2+1]),
-    Indian.Energy   = rowMeans(dists_by_country[Indian*2+2]),
-    Chinese.Valence = rowMeans(dists_by_country[Chinese*2+1]),
-    Chinese.Energy  = rowMeans(dists_by_country[Chinese*2+2]),
-    Arab.Valence    = rowMeans(dists_by_country[Arab*2+1]),
-    Arab.Energy     = rowMeans(dists_by_country[Arab*2+2]),
-    Western.Valence = rowMeans(dists_by_country[Western*2+1]),
-    Western.Energy  = rowMeans(dists_by_country[Western*2+2])
+    Valence.Indian  = rowMeans(dists_by_country[Indian*2+1]),
+    Energy.Indian   = rowMeans(dists_by_country[Indian*2+2]),
+    Valence.Chinese = rowMeans(dists_by_country[Chinese*2+1]),
+    Energy.Chinese  = rowMeans(dists_by_country[Chinese*2+2]),
+    Valence.Arab    = rowMeans(dists_by_country[Arab*2+1]),
+    Energy.Arab     = rowMeans(dists_by_country[Arab*2+2]),
+    Valence.Western = rowMeans(dists_by_country[Western*2+1]),
+    Energy.Western  = rowMeans(dists_by_country[Western*2+2])
   )
 
 combined_dists_country_culture <- data.frame(dists_by_country[1:2],
-    Indian = dists_by_country_and_culture$Indian.Valence^2 + dists_by_country_and_culture$Indian.Energy^2,
-    Chinese = dists_by_country_and_culture$Chinese.Valence^2 + dists_by_country_and_culture$Chinese.Energy^2,
-    Arab = dists_by_country_and_culture$Arab.Valence^2 + dists_by_country_and_culture$Arab.Energy^2,
-    Western = dists_by_country_and_culture$Western.Valence^2 + dists_by_country_and_culture$Western.Energy^2
+    Distance.Indian = sqrt(dists_by_country_and_culture$Valence.Indian^2 + dists_by_country_and_culture$Energy.Indian^2),
+    Distance.Chinese = sqrt(dists_by_country_and_culture$Valence.Chinese^2 + dists_by_country_and_culture$Energy.Chinese^2),
+    Distance.Arab = sqrt(dists_by_country_and_culture$Valence.Arab^2 + dists_by_country_and_culture$Energy.Arab^2),
+    Distance.Western = sqrt(dists_by_country_and_culture$Valence.Western^2 + dists_by_country_and_culture$Energy.Western^2)
   )
 
 
@@ -77,13 +83,52 @@ unzip("plot_data/world_borders.zip", exdir="plot_data")
 # Read shape file into spatial polygon data frame
 countries_spdf <- read_sf(dsn = "plot_data", layer = "TM_WORLD_BORDERS_SIMPL-0.3")
 
-mypalette <- colorNumeric( palette="viridis", domain=countries_spdf$POP2005, na.color="transparent")
-mypalette(c(45,43))
+
+# Add our data to the spdf
+full_spdf <- merge(countries_spdf, combined_dists_country_culture, by.x = "NAME", by.y = "country", all.x=TRUE) |>
+  merge(dists_by_country_and_culture[,-2], by.x = "NAME", by.y="country", all.x=TRUE)
+
+
+map_colour_palette <- colorNumeric( palette=c("#000000", "#FF0000"), domain=full_spdf$Distance.Arab, na.color="transparent")
+
+map_colour_palette <- function (valence, energy, total) 
+{
+  rng <- range(total, na.rm = TRUE)
+  rescaled <- scales::rescale(total, from = rng)
+  if (any(rescaled < 0 | rescaled > 1, na.rm = TRUE)) 
+    warning("Some values were outside the color scale and will be treated as NA")
+
+  ifelse(is.na(rescaled), "transparent",
+         sapply(rescaled, function(x) ifelse(!is.na(x), grDevices::hsv(h=0, s=x, v=1), NA)))
+}
+
+
+world_map_tooltips <- paste(
+  "Country: ", full_spdf$NAME,"<br/>", 
+  ifelse(is.na(full_spdf$response.count), 
+  "No Data<br/>", 
+  paste(
+    "№ Responses: ", full_spdf$response.count, "<br/>", 
+    "Difference in Valence: ", round(full_spdf$Valence.Arab, 4), "<br/>",
+    "Difference in Energy: ", round(full_spdf$Energy.Arab, 4), "<br/>",
+    "Total Difference: ", round(full_spdf$Distance.Arab, 4), "<br/>",
+    sep="")
+  )) |>
+  lapply(htmltools::HTML)
 
 # Basic choropleth with leaflet?
-leaflet_widget <- leaflet(countries_spdf) %>% 
+leaflet_widget <- leaflet(full_spdf) %>% 
   addTiles()  %>% 
   setView( lat=10, lng=0 , zoom=2) %>%
-  addPolygons( fillColor = ~mypalette(POP2005), stroke=FALSE )
+  addPolygons(
+    fillColor = ~map_colour_palette(Valence.Arab, Energy.Arab, Distance.Arab), 
+    fillOpacity = 0.9,
+    stroke=FALSE, 
+    label=world_map_tooltips,
+    labelOptions = labelOptions( 
+      style = list("font-weight" = "normal", padding = "3px 8px"), 
+      textsize = "13px", 
+      direction = "auto"
+    ))
 
 leaflet_widget
