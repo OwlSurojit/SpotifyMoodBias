@@ -4,8 +4,11 @@ library(dplyr)
 
 
 spotify_data <-
-  get_playlist_audio_features("", "70RrIIkKSiARJwyQXUv30k?si=32f52496041844c4") |>
-  select("track.name", "energy", "valence")
+  get_playlist_audio_features("", "70RrIIkKSiARJwyQXUv30k?si=32f52496041844c4") 
+
+spotify_data$artists = sapply(spotify_data$track.artists, function(x) paste(x$name, collapse=", "))
+
+spotify_data <- select(spotify_data, "track.name", "artists", "energy", "valence")
 
 spotify_data$culture = c(rep("Indian", 5), rep("Chinese", 5), rep("Arab", 5), rep("Western", 8))
 spotify_data$modernity = c(rep("Traditional", 2), rep("Contemporary", 3), rep("Traditional", 3), rep("Contemporary", 2), rep("Traditional", 3), rep("Contemporary", 2), rep("Traditional", 3), rep("Contemporary", 5))
@@ -39,7 +42,7 @@ human.valence <- means[V_range]
 human.energy <- means[E_range]
 
 full_data <- data.frame(spotify_data, human.energy, human.valence)
-names(full_data)[2:3] <- c("spotify.energy", "spotify.valence")
+names(full_data)[3:4] <- c("spotify.energy", "spotify.valence")
 row.names(full_data) <- NULL
 
 dist_E <- full_data$spotify.energy - full_data$human.energy
@@ -85,12 +88,12 @@ dists_by_modernity <- calc_means_per_style(list(dist_V, dist_E), list(Traditiona
 colnames(dists_by_modernity) <- c("Valence Diff.", "Energy Diff.")
 rownames(dists_by_modernity) <- c("Traditional", "Contemporary")
 
-dists_by_modernity_and_culture <- calc_means_per_style(list(dist_V, dist_E),
-                                                       list(intersect(Indian, Traditional), intersect(Indian, Contemporary),
-                                                            intersect(Chinese, Traditional), intersect(Chinese, Contemporary),
-                                                            intersect(Arab, Traditional), intersect(Arab, Contemporary),
-                                                            intersect(Western, Traditional), intersect(Western, Contemporary)))
-colnames(dists_by_modernity_and_culture) <- c("Valence Diff.", "Energy Diff.")
+modernity_culture_indices <- list(intersect(Indian, Traditional), intersect(Indian, Contemporary),
+                                 intersect(Chinese, Traditional), intersect(Chinese, Contemporary),
+                                 intersect(Arab, Traditional), intersect(Arab, Contemporary),
+                                 intersect(Western, Traditional), intersect(Western, Contemporary))
+dists_by_modernity_and_culture <- calc_means_per_style(list(dist_V, dist_E), modernity_culture_indices)
+colnames(dists_by_modernity_and_culture) <- c("Valence.Diff", "Energy.Diff")
 rownames(dists_by_modernity_and_culture) <- c("Indian Traditional",  "Indian Contemporary",
                                               "Chinese Traditional", "Chinese Contemporary",
                                               "Arab Traditional",    "Arab Contemporary",

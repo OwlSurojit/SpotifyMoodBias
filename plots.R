@@ -1,9 +1,79 @@
 library(tidyverse)
 library(plotly)
 
+######################
+### RAW DATA PLOTS ###
+######################
+
+
+spotify_mood_data <- spotify_data |> 
+  ggplot(aes(x = valence, y = energy, color = culture, shape = modernity, label = track.name)) + 
+  xlim(0,1) + ylim(0,1) +
+  geom_point(size=3)
+ggplotly(spotify_mood_data, tooltip = c("track.name"))
+
+culture_colours = c("#00BFC4", "#F7766D", "#C77CFF", "#7CAE00")
+
+spotify_mood_data_plot <- plot_ly(
+  full_data, 
+  x = ~spotify.valence,
+  y = ~spotify.energy,
+  color = ~culture,
+  symbol = ~modernity,
+  colors = culture_colours,
+  symbols = c("x", "circle"),
+  type = 'scatter', 
+  mode = 'markers', 
+  size=10,
+  text = ~paste(track.name, "●", artists),
+  #hoverinfo = "text+x+y") |>
+  hovertemplate = paste("<b>%{text}</b><br>",
+                         "Valence: %{x}<br>",
+                         "Energy: %{y}",
+                         "<extra></extra>")
+  ) |>
+  layout(title = "Spotify Mood Data",
+         xaxis = list(range=c(-0.05,1.05), title="Valence", showline=FALSE, zeroline = FALSE, gridcolor="white"), 
+         yaxis = list(range=c(-0.05,1.05), title="Energy", showline=FALSE, zeroline = FALSE, gridcolor="white"), 
+         plot_bgcolor = "#EBEBEB"
+         )
+spotify_mood_data_plot
+
+
+human_mood_data_plot <- plot_ly(
+  full_data, 
+  x = ~human.valence,
+  y = ~human.energy,
+  color = ~culture,
+  symbol = ~modernity,
+  colors = culture_colours,
+  symbols = c("x", "circle"),
+  type = 'scatter', 
+  mode = 'markers', 
+  size=10,
+  text = ~paste(track.name, "●", artists),
+  #hoverinfo = "text+x+y") |>
+  hovertemplate = paste("<b>%{text}</b><br>",
+                        "Valence: %{x}<br>",
+                        "Energy: %{y}",
+                        "<extra></extra>")
+) |>
+  layout(title = "Human Mood Data",
+         xaxis = list(range=c(-0.05,1.05), title="Valence", showline=FALSE, zeroline = FALSE, gridcolor="white"), 
+         yaxis = list(range=c(-0.05,1.05), title="Energy", showline=FALSE, zeroline = FALSE, gridcolor="white"), 
+         plot_bgcolor = "#EBEBEB"
+  )
+human_mood_data_plot
+
+
+
+
+#####################
+##### MAIN PLOT #####
+#####################
+
 modernity = rep(c("Traditional", "Contemporary"), 4)
 culture = c(rep("Indian", 2), rep("Chinese", 2), rep("Arab", 2), rep("Western", 2))
-main_graph_data <- data.frame(dists_by_modernity_and_culture, modernity, culture)
 
 # main_graph <- main_graph_data |>
 #   ggplot(aes(x=`Valence.Difference`, y=`Energy.Difference`, color = culture, shape=modernity)) + 
@@ -15,11 +85,42 @@ main_graph_data <- data.frame(dists_by_modernity_and_culture, modernity, culture
 #   labs(color = "Culture", shape = "Modernity")
 # plot(main_graph)
 
+human_ratings_culture_modernity <- calc_means_per_style(list(full_data$human.valence, full_data$human.energy), modernity_culture_indices)
+colnames(human_ratings_culture_modernity) <- c("Valence.Human", "Energy.Human")
 
-main_graph <- plot_ly(main_graph_data, x = ~`Valence.Diff.`, y = ~`Energy.Diff.`, color = ~culture, symbol = ~modernity,
-             colors = c("red", "green", "blue", "purple"),
-             symbols = c("x", "circle"),
-             type = 'scatter', mode = 'markers', size=10) |>
+spotify_ratings_culture_modernity <- calc_means_per_style(list(full_data$spotify.valence, full_data$spotify.energy), modernity_culture_indices) 
+colnames(spotify_ratings_culture_modernity) <- c("Valence.Spotify", "Energy.Spotify")
+
+main_graph_data <- data.frame(modernity, 
+                              culture, 
+                              dists_by_modernity_and_culture,
+                              human_ratings_culture_modernity, 
+                              spotify_ratings_culture_modernity,
+                              Overall.Diff = sqrt(dists_by_modernity_and_culture$Valence.Diff^2 + dists_by_modernity_and_culture$Energy.Diff^2))
+
+
+main_graph <- plot_ly(
+   main_graph_data, 
+   x = ~Valence.Diff,
+   y = ~Energy.Diff,
+   color = ~culture,
+   symbol = ~modernity,
+   colors = culture_colours,
+   symbols = c("x", "circle"),
+   type = 'scatter', 
+   mode = 'markers', 
+   size = 10,
+   text = ~modernity,
+   hovertemplate = ~paste0("<b>", culture, " ", modernity, "</b><br>",
+                           "Valence Spotify: ", round(Valence.Spotify, 4), "<br>",
+                           "Energy Spotify: ", round(Energy.Spotify, 4), "<br>",
+                           "Valence Human: ", round(Valence.Human, 4), "<br>",
+                           "Energy Human: ", round(Energy.Human, 4), "<br>",
+                           "Valence Difference: %{x:.4f}<br>",
+                           "Energy Difference: %{y:.4f}<br>",
+                           "<i>Overall Difference:</i> ", round(Overall.Diff, 4),
+                           "<extra></extra>")
+   ) |>
   layout(title = "Differences between Human and Spotify ratings per culture and modernity",
          xaxis = list(range=c(-0.5,0.5), title="Difference in Valence"), yaxis = list(range=c(-0.5, 0.5), title="Difference in Energy"))
 
@@ -88,28 +189,42 @@ full_spdf <- merge(countries_spdf, combined_dists_country_culture, by.x = "NAME"
   merge(dists_by_country_and_culture[,-2], by.x = "NAME", by.y="country", all.x=TRUE)
 
 
-map_colour_palette <- function (valence, energy, total) 
+culture_hues <- c("Indian" = 274, "Chinese" = 3, "Arab" = 190, "Western" = 100)
+culture_lightness <- c("Indian" = .76, "Chinese" = .7, "Arab" = .74, "Western" = .68)
+
+map_colour_palette <- function (culture_str, total) 
 {
   rng <- range(total, na.rm = TRUE)
   rescaled <- scales::rescale(total, from = rng)
-  if (any(rescaled < 0 | rescaled > 1, na.rm = TRUE)) 
-    warning("Some values were outside the color scale and will be treated as NA")
 
-  ifelse(is.na(rescaled), "transparent",
-         sapply(rescaled, function(x) ifelse(!is.na(x), grDevices::hsv(h=0, s=x, v=1), NA)))
+  cols <- ifelse(is.na(rescaled), "transparent",
+         sapply(rescaled, 
+                function(x) ifelse(!is.na(x), 
+                                   grDevices::hsv(
+                                     h=culture_hues[culture_str]/360, 
+                                     s=x, 
+                                     v=0.7), 
+                                   NA)))
+  lbls <- seq(rng[1], rng[2], length.out=5)
+  pal <- grDevices::hsv(
+    h=culture_hues[culture_str]/360, 
+    s=scales::rescale(lbls, from = rng), 
+    v=0.7)
+  
+  list("palette" = pal, "country.colours" = cols, "labels" = round(lbls, 4))
 }
 
 
 world_map_tooltips <- function(culture_str) {
   paste0(
-  "Country: ", full_spdf$NAME,"<br/>", 
+  "<b>", full_spdf$NAME,"</b><br/>", 
   ifelse(is.na(full_spdf$response.count), 
   "No Data<br/>", 
   paste0(
     "№ Responses: ", full_spdf$response.count, "<br/>", 
     "Difference in Valence: ", round(full_spdf[[paste0("Valence.", culture_str)]], 4), "<br/>",
     "Difference in Energy: ", round(full_spdf[[paste0("Energy.", culture_str)]], 4), "<br/>",
-    "Total Difference: ", round(full_spdf[[paste0("Distance.", culture_str)]], 4), "<br/>"
+    "<i>Total Difference:</i> ", round(full_spdf[[paste0("Distance.", culture_str)]], 4), "<br/>"
     )
   )) |>
   lapply(htmltools::HTML)
@@ -123,24 +238,24 @@ map_label_options <- labelOptions(
 
 addPolygons_custom <- function(x, culture_str) {
   colour_palette <- map_colour_palette(
-    full_spdf[[paste0("Valence.", culture_str)]],
-    full_spdf[[paste0("Energy.", culture_str)]],
+    culture_str,
     full_spdf[[paste0("Distance.", culture_str)]]
   )
-  palette_range
   addPolygons(x,
     group = culture_str,
-    fillColor = colour_palette, 
+    fillColor = colour_palette$country.colours, 
     fillOpacity = 0.9,
     stroke=FALSE, 
     label=world_map_tooltips(culture_str),
     labelOptions = map_label_options) |>
     addLegend(
       group = culture_str,
-      colors= colour_palette, 
-      values=~full_spdf[[paste0("Distance.", culture_str)]], 
-      opacity=0.9, 
-      title = "Rating Distance", 
+      className = paste("info legend", culture_str),
+      colors= colour_palette$palette,
+      labels= colour_palette$labels,
+      values=~full_spdf[[paste0("Distance.", culture_str)]],
+      opacity=0.9,
+      title = "Total Rating Difference",
       position = "bottomleft" )
 }
 
@@ -153,7 +268,21 @@ leaflet_widget <- leaflet(full_spdf) |>
   addPolygons_custom("Arab") |>
   addPolygons_custom("Western") |>
   addLayersControl(baseGroups = c("Indian", "Chinese", "Arab", "Western"), 
-                   options = layersControlOptions(collapsed = FALSE)) 
+                   options = layersControlOptions(collapsed = FALSE))  |>
+  htmlwidgets::onRender("
+      function(el, x) {
+         var updateLegend = function () {
+            var selectedGroup = document.querySelectorAll('input:checked')[0].nextSibling.innerText.substr(1);
+
+            document.querySelectorAll('.legend').forEach(a => a.hidden=true);
+            document.querySelectorAll('.legend').forEach(l => {
+               if (l.classList.contains(selectedGroup)) l.hidden=false;
+            });
+         };
+         updateLegend();
+         this.on('baselayerchange', el => updateLegend());
+      }"
+  )
   
 
 leaflet_widget

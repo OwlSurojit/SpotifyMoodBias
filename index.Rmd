@@ -14,12 +14,6 @@ library(tidyverse)
 library(spotifyr)
 library(plotly)
 
-survey_songs <-
-  get_playlist_audio_features("", "70RrIIkKSiARJwyQXUv30k?si=32f52496041844c4")
-
-survey_songs$culture = c(rep("India", 5), rep("China", 5), rep("Arab", 5), rep("Western", 8))
-survey_songs$modernity = c(rep("Traditional", 2), rep("Contemporary", 3), rep("Traditional", 3), rep("Contemporary", 2), rep("Traditional", 3), rep("Contemporary", 2), rep("Traditional", 3), rep("Contemporary", 5))
-
 source("analysis.R")
 source("plots.R")
 
@@ -31,11 +25,11 @@ Results
 Column {.sidebar data-width=300}
 -----------------------------------------------------------------------
 ### Overview
-This portfolio provides insights into our research on the accuracy and possible bias of the Spotify API song ratings when comparing Western and Non-Western music. The Non-Western variable was further separated into music from China, India, and the Middle East. Participants were asked to rate five songs of each Non-Western culture, of which two were considered contemporary and three from a more traditional background, based on two different categories that the Spotify API provides: valence and energy. To capture ratings of Western music, eight songs from Western-based artists were selected to represent the comparison group, again using four classical and four contemporary songs. We analyzed whether there were any differences in human- and Spotify-made ratings of these songs, considering different variables: the human rater’s ethnic background, whether the rated song is traditional or contemporary, and obviously whether the song comes form a Non-Western or Western background. On this page you’ll be able to get an overview of the results of our research.
+This portfolio provides insights into our research on the accuracy and possible bias of the Spotify API song ratings when comparing Western and Non-Western music. The Non-Western variable was further separated into music from China, India, and the Middle East. Participants were asked to rate five songs of each Non-Western culture, of which two were considered contemporary and three from a more traditional background, based on two different categories that the Spotify API provides: valence and energy. To capture ratings of Western music eight songs from Western-based artists were selected to represent the comparison group, again using four classical and four contemporary songs. We analyzed whether there were any differences in human- and Spotify-made ratings of these songs, considering different variables: the human rater’s ethnic background, whether the rated song is traditional or contemporary, and whether the song comes from a Non-Western or Western background. On this page you’ll be able to get an overview of the results of our research.
 
 Column
 -----------------------------------------------------------------------
-### Mood Data Differences {data-height=650}
+### Mood Data Differences {data-height=550}
 
 ```{r}
 main_graph
@@ -47,27 +41,72 @@ main_graph
 
 ### Test results
 
+#### Overall accuracy
+
+The main hypothesis that Spotify’s ratings would be less accurate for non-Western than Western songs was not supported. In actuality, an opposite effect was found: the ratings were more accurate for non-Western music (t(1543.1) = -2.64, p = .008), as shown with a Welsch independent-samples t-test.
+
+A closer investigation of at the differences in accuracy with a two-way ANOVA testing for differences across regions, traditionality and their interaction showed a main effect of region (F(3) = 6.79, p < .001) and a main effect of traditionality (F(1) = 12.55, p < .001), but no interaction effects between the two (F(3) = 1.20, p = .310). 
+
+A follow-up series of pairwise t-test shed light on the differences in accuracy across regions. Significant differences were found for Western vs Arab, Western vs Indian, Chinese vs Arab and Chinese vs Indian songs. The alpha-level of significance was adjusted with the Bonferroni correction to 0.83%.
+
+A follow-up Welsch t-test showed that the accuracy was higher for contemporary than traditional songs (t(2168.6) = -3.23, p = .001). 
+
+To gain a more detailed understanding of the effects, the study assessed the accuracy in valence and energy ratings separately.
+
+
+#### Valence accuracy
+A Welsch independent-samples t-test showed that valence ratings were equally accurate for non-Western and Western songs (t(1660.2) = -1.88, p = .060).
+
+A two-way ANOVA testing for differences in valence ratings across regions, traditionality and their interaction found a main effect of region (F(3) = 4.07, p = .007) but no main effect of traditionality (F(1) = 0.90, p = .343). A significant interaction between region and traditionality was observed (F(3) = 2.72,  p = .043).
+
+Follow-up pairwise t-test were employed to test the differences in valence ratings’ accuracy across regions. At the Bonferroni-adjusted significance level of 0.83% no significant differences were found across regions.
+
+
+#### Energy accuracy
+Energy ratings were more accurate for non-Western than Western songs (t(1270.2) = -5.12, p < .001), as shown with a Welsch independent-samples t-test.
+
+A two-way ANOVA testing for differences in energy ratings across regions, traditionality and their interaction found a main effect of region (F(3) = 25.06, p = < .001) and main effect of traditionality (F(1) = 342.14, p < .001). Furthermore, a significant interaction between region and traditionality was present (F(3) = 28.23,  p < .001).
+
+Follow-up pairwise t-test were employed to test the differences in energy ratings’ accuracy across regions. At the Bonferroni-adjusted significance level of 0.83% significant differences were found for Western vs Arab, Western vs Indian, Chinese vs Arab and Chinese vs Indian songs.
+
+A follow-up Welsch t-test showed that the accuracy of energy ratings was higher for contemporary than traditional songs (t(1747.6) = -16.41, p < .001). 
+
 
 Column
 -----------------------------------------------------------------------
-### Regional Response Differences {data-height=550}
+### Regional Response Differences {data-height=750}
 ```{r}
 leaflet_widget
 ```
 
 
 ### Explanation of the plots
+The graph on the left depicts the difference between human and Spotify ratings for energy and valence. The accuracy of Spotify ratings for valence was relatively the same for western and non-western music. However, contrary to our expectations, the Spotify ratings for energy were more precise for non-western music than for western music. Surprisingly, western traditional music had the least accurate rating while Indian traditional and Chinese contemporary music had the most accurate ratings.
+The maps on right depict the difference between human and Spotify ratings depending on the respondent's country of origin. People of Arabic descent rated Arabic music very differently compared to the Spotify ratings, potentially hinting at the Spotify API’s inaccuracy.
 
 
 Background
 ==========
 
-Column {.tabset}
+Column {.tabset data-width=500}
 -----------------------------------------------------------------------
 
 ### Background Information
 
+#### Methods
+
+We conceptualized and distributed our survey using Qualtrics. Participants were first asked to give their consent, after which they were requested to provide information on their country of birth. Next, a definition of valence and energy were supplied to give each participant a better idea of what to keep in mind when rating each of the following songs. Each participant listened to all song clips in a randomized order, ensuring there were no order effects that could have influenced our results. The survey was distributed by making use of our personal network of family, friends, and acquaintances. After collecting responses for about four weeks, we ended up with a total number of 130 respondents. The countries most represented in our final sample were Slovenia, Slovakia, India, the Netherlands, Romania, and Germany. The collected data was then exported for further analysis.
+
+#### Other interesting findings
+
+* No significant main or interaction effect of Western/Non-Western music on valence ratings (ANOVA)
+* No significant difference of Western/Non-Western music on the difference in human- and Spotify-made ratings (t-test)
+* No difference in ratings for valence in terms of contemporary and traditional music (t-test)
+* Significantly higher accuracy in energy ratings for contemporary compared to traditional music(t-test)
+
 ### Bibliography
+#### Previous and related research
+
 Lee, H., Hoeger, F., Schoenwiesner, M., Park, M., & Jacoby, N. (2021). [Cross-cultural mood perception in pop songs and its alignment with mood detection algorithms](https://doi.org/10.48550/arXiv.2108.00768) arXiv preprint arXiv:2108.00768.
 
 Vidas, D., McGovern, H. T., & Nitschinsk, L. (2021). [Culture and ideal affect: Cultural dimensions predict Spotify listening patterns](http://dx.doi.org/10.31234/osf.io/95w2t)
@@ -83,31 +122,39 @@ Sangnark, S., Lertwatechakul, M., & Benjangkaprasert, C. (2018, October). [Thai 
 ### Discussion
 
 
-Column 
+### Limitations
+
+#### Limited dataset
+
+The bane of our study was to find out if there is a potential bias in regard to how the Spotify API rates Western and Non-Western songs based on their Energy and Valence. By creating a survey where the participants were asked to rate  23 songs from different cultures, we were able to compare these findings to the ones from Spotify. For our data, we were able to collect 102 entries from participants residing in 26 different countries. Therefore, our findings showing geographical response data are based only on a few people from any given country and in that case should not be considered as representing the whole country. This issue would be solved with a larger sample size.
+
+
+#### Spotify unknown rating
+
+Another limitation we faced was correctly scaling up our 7-point likert scale and Spotify's rating of valence and energy on a scale ranging from 0 to 1. Despite the public access to the rating of each song, the method Spotify uses to calculate the actual values remains obscured. Therefore, the most challenging part was a measurement assumption. For this research, we assumed that the distances between values on the Spotify scale are weighted equally. This might not be the case, causing our results to be inaccurate.
+
+#### Length of Survey
+
+In an ideal setting, we would be able to play the full songs to the participants, and not only 15 second snippets we had to resort to with the aim of keeping the questionnaire under 15 minutes long. The limitation here is that Spotify ranks both valence and energy as an average calculated from a whole song, while our participants had only 15  pre-selected seconds to rate each song. Therefore, our selected clip might not be representative of the whole song, causing deviation from the accuracy of measurements.
+
+
+
+
+Column {data-width=400}
 -----------------------------------------------------------------------
 
 ### Spotify Mood Data
 
 
 ```{r}
-smd <- survey_songs |> 
-  ggplot(aes(x = valence, y = energy, color = culture, shape = modernity, label = track.name)) + 
-  xlim(0,1) + ylim(0,1) +
-  geom_point(size=3)
-ggplotly(smd)
+spotify_mood_data_plot
 ```
 
 <!-- ![The valence-energy plot for all songs used in the survey as retrieved from Spotify (Dec 2023)](songSelectionVA.png) -->
 
 ### Human Mood Data
 ```{r}
-p <- survey_songs |> 
-  ggplot(aes(x = valence, y = energy, color = culture, shape = modernity, label = track.name)) + 
-  xlim(0,1) + ylim(0,1) +
-  geom_point(size=3) +
-  geom_text(hjust=.5, vjust=-2.2)
-
-ggplotly(p)
+human_mood_data_plot
 ```
 
 
