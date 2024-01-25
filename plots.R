@@ -74,7 +74,6 @@ combined_dists_country_culture <- data.frame(dists_by_country[1:2],
 
 
 # load country border data
-install.packages(c("sf", "leaflet"))
 library(sf)
 library(leaflet)
 download.file("http://thematicmapping.org/downloads/TM_WORLD_BORDERS_SIMPL-0.3.zip" , destfile="plot_data/world_borders.zip")
@@ -89,8 +88,6 @@ full_spdf <- merge(countries_spdf, combined_dists_country_culture, by.x = "NAME"
   merge(dists_by_country_and_culture[,-2], by.x = "NAME", by.y="country", all.x=TRUE)
 
 
-map_colour_palette <- colorNumeric( palette=c("#000000", "#FF0000"), domain=full_spdf$Distance.Arab, na.color="transparent")
-
 map_colour_palette <- function (valence, energy, total) 
 {
   rng <- range(total, na.rm = TRUE)
@@ -103,32 +100,60 @@ map_colour_palette <- function (valence, energy, total)
 }
 
 
-world_map_tooltips <- paste(
+world_map_tooltips <- function(culture_str) {
+  paste0(
   "Country: ", full_spdf$NAME,"<br/>", 
   ifelse(is.na(full_spdf$response.count), 
   "No Data<br/>", 
-  paste(
+  paste0(
     "№ Responses: ", full_spdf$response.count, "<br/>", 
-    "Difference in Valence: ", round(full_spdf$Valence.Arab, 4), "<br/>",
-    "Difference in Energy: ", round(full_spdf$Energy.Arab, 4), "<br/>",
-    "Total Difference: ", round(full_spdf$Distance.Arab, 4), "<br/>",
-    sep="")
+    "Difference in Valence: ", round(full_spdf[[paste0("Valence.", culture_str)]], 4), "<br/>",
+    "Difference in Energy: ", round(full_spdf[[paste0("Energy.", culture_str)]], 4), "<br/>",
+    "Total Difference: ", round(full_spdf[[paste0("Distance.", culture_str)]], 4), "<br/>"
+    )
   )) |>
   lapply(htmltools::HTML)
+}
 
-# Basic choropleth with leaflet?
-leaflet_widget <- leaflet(full_spdf) %>% 
-  addTiles()  %>% 
-  setView( lat=10, lng=0 , zoom=2) %>%
-  addPolygons(
-    fillColor = ~map_colour_palette(Valence.Arab, Energy.Arab, Distance.Arab), 
+map_label_options <- labelOptions( 
+  style = list("font-weight" = "normal", padding = "3px 8px"), 
+  textsize = "13px", 
+  direction = "auto"
+)
+
+addPolygons_custom <- function(x, culture_str) {
+  colour_palette <- map_colour_palette(
+    full_spdf[[paste0("Valence.", culture_str)]],
+    full_spdf[[paste0("Energy.", culture_str)]],
+    full_spdf[[paste0("Distance.", culture_str)]]
+  )
+  palette_range
+  addPolygons(x,
+    group = culture_str,
+    fillColor = colour_palette, 
     fillOpacity = 0.9,
     stroke=FALSE, 
-    label=world_map_tooltips,
-    labelOptions = labelOptions( 
-      style = list("font-weight" = "normal", padding = "3px 8px"), 
-      textsize = "13px", 
-      direction = "auto"
-    ))
+    label=world_map_tooltips(culture_str),
+    labelOptions = map_label_options) |>
+    addLegend(
+      group = culture_str,
+      colors= colour_palette, 
+      values=~full_spdf[[paste0("Distance.", culture_str)]], 
+      opacity=0.9, 
+      title = "Rating Distance", 
+      position = "bottomleft" )
+}
+
+# Basic choropleth with leaflet?
+leaflet_widget <- leaflet(full_spdf) |>
+  addTiles()  |>
+  setView(lat=10, lng=0 , zoom=2) |>
+  addPolygons_custom("Indian") |>
+  addPolygons_custom("Chinese") |>
+  addPolygons_custom("Arab") |>
+  addPolygons_custom("Western") |>
+  addLayersControl(baseGroups = c("Indian", "Chinese", "Arab", "Western"), 
+                   options = layersControlOptions(collapsed = FALSE)) 
+  
 
 leaflet_widget

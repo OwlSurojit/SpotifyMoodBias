@@ -182,7 +182,6 @@ ANOVA_E3 <- aov(Energy_distance_abs ~ region,
 summary(ANOVA_E3)
 
 # Energy: follow-up pairwise t-tests
-install.packages("rstatix")
 library("rstatix")
 pairwise_t_test(Energy_distance_abs ~ region,
                 data = big_data,
