@@ -93,24 +93,26 @@ colnames(spotify_ratings_culture_modernity) <- c("Valence.Spotify", "Energy.Spot
 
 main_graph_data <- data.frame(modernity, 
                               culture, 
+                              Song.Type = interaction(culture, modernity, sep = " "),
                               dists_by_modernity_and_culture,
                               human_ratings_culture_modernity, 
                               spotify_ratings_culture_modernity,
                               Overall.Diff = sqrt(dists_by_modernity_and_culture$Valence.Diff^2 + dists_by_modernity_and_culture$Energy.Diff^2))
 
 
-main_graph <- plot_ly(
-   main_graph_data, 
+main_graph <- plot_ly() |>
+  add_trace(data = main_graph_data,
    x = ~Valence.Diff,
    y = ~Energy.Diff,
+   xaxis = 'x',
+   yaxis = 'y',
    color = ~culture,
    symbol = ~modernity,
    colors = culture_colours,
    symbols = c("x", "circle"),
    type = 'scatter', 
    mode = 'markers', 
-   size = 10,
-   text = ~modernity,
+   size = 10, 
    hovertemplate = ~paste0("<b>", culture, " ", modernity, "</b><br>",
                            "Valence Spotify: ", round(Valence.Spotify, 4), "<br>",
                            "Energy Spotify: ", round(Energy.Spotify, 4), "<br>",
@@ -121,8 +123,62 @@ main_graph <- plot_ly(
                            "<i>Overall Difference:</i> ", round(Overall.Diff, 4),
                            "<extra></extra>")
    ) |>
+  add_trace(data = main_graph_data,
+            x = ~Song.Type,
+            y = ~Overall.Diff,
+            color = ~culture,
+            colors = culture_colours,
+            type = 'bar',
+            xaxis = 'x2',
+            yaxis = 'y2',
+            visible=F,
+            inherit=F,
+            hovertemplate = ~paste0("<b>", culture, " ", modernity, "</b><br>",
+                                    "Valence Spotify: ", round(Valence.Spotify, 4), "<br>",
+                                    "Energy Spotify: ", round(Energy.Spotify, 4), "<br>",
+                                    "Valence Human: ", round(Valence.Human, 4), "<br>",
+                                    "Energy Human: ", round(Energy.Human, 4), "<br>",
+                                    "Valence Difference: %{x:.4f}<br>",
+                                    "Energy Difference: %{y:.4f}<br>",
+                                    "<i>Overall Difference:</i> ", round(Overall.Diff, 4),
+                                    "<extra></extra>")
+            ) |>
   layout(title = "Differences between Human and Spotify ratings per culture and modernity",
-         xaxis = list(range=c(-0.5,0.5), title="Difference in Valence"), yaxis = list(range=c(-0.5, 0.5), title="Difference in Energy"))
+         margin = list(b=80),
+         xaxis = list(range=c(-0.5, 0.5), title="Difference in Valence"), 
+         yaxis = list(range=c(-0.5, 0.5), title="Difference in Energy"),
+         xaxis2 = list(overlaying = "x", visible = FALSE, type='category'),
+         yaxis2 = list(overlaying = "y", visible = FALSE),
+         updatemenus = list(
+           list(
+             type = "buttons",
+             direction = "down",
+             xanchor = "left",
+             yanchor = "top",
+             pad = list(l= 10, r=10, t= 10, b = 10),
+             x = 0,
+             y = 1,
+             buttons = list(
+               list(method = "update",
+                    args = list(list(visible = list(T,T,T,T,T,T,T,T,F,F,F,F)),
+                                list(xaxis = list(visible = TRUE,
+                                                  range=c(-0.5, 0.5), title="Difference in Valence"),
+                                     xaxis2 = list(overlaying = "x", visible = FALSE),
+                                     yaxis = list(visible = TRUE,
+                                                  range=c(-0.5, 0.5), title="Difference in Energy"),
+                                     yaxis2 = list(overlaying = "y", visible = FALSE))),
+                    label = "Scatter"),
+               list(method = "update",
+                    args = list(list(visible = list(F,F,F,F,F,F,F,F,T,T,T,T)),
+                                list(xaxis = list(visible = F),
+                                     xaxis2 = list(overlaying = "x", visible = T),
+                                     yaxis = list(visible = F),
+                                     yaxis2 = list(overlaying = "y", visible = T,
+                                                   title="Overall Difference")),
+                                list(showlegend = F)),
+                    label = "Barchart")
+             ))
+         ))
 
 main_graph
 
@@ -177,8 +233,9 @@ combined_dists_country_culture <- data.frame(dists_by_country[1:2],
 # load country border data
 library(sf)
 library(leaflet)
-download.file("http://thematicmapping.org/downloads/TM_WORLD_BORDERS_SIMPL-0.3.zip" , destfile="plot_data/world_borders.zip")
-unzip("plot_data/world_borders.zip", exdir="plot_data")
+# Uncomment this to get the world map border data
+# download.file("http://thematicmapping.org/downloads/TM_WORLD_BORDERS_SIMPL-0.3.zip" , destfile="plot_data/world_borders.zip")
+# unzip("plot_data/world_borders.zip", exdir="plot_data")
 
 # Read shape file into spatial polygon data frame
 countries_spdf <- read_sf(dsn = "plot_data", layer = "TM_WORLD_BORDERS_SIMPL-0.3")
@@ -269,17 +326,23 @@ leaflet_widget <- leaflet(full_spdf) |>
   addPolygons_custom("Western") |>
   addLayersControl(baseGroups = c("Indian", "Chinese", "Arab", "Western"), 
                    options = layersControlOptions(collapsed = FALSE))  |>
+  # Custom JS to show only the relevant legends
   htmlwidgets::onRender("
       function(el, x) {
          var updateLegend = function () {
+
             var selectedGroup = document.querySelectorAll('input:checked')[0].nextSibling.innerText.substr(1);
 
             document.querySelectorAll('.legend').forEach(a => a.hidden=true);
             document.querySelectorAll('.legend').forEach(l => {
-               if (l.classList.contains(selectedGroup)) l.hidden=false;
+               if (l.classList.contains(selectedGroup)) {l.hidden=false; console.log(selectedGroup)};
             });
          };
          updateLegend();
+         window.addEventListener('load', () => {
+          console.log('helo again');
+          updateLegend();
+         });
          this.on('baselayerchange', el => updateLegend());
       }"
   )
