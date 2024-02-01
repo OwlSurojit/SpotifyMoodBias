@@ -177,26 +177,19 @@ Column {data-width=300}
 <iframe style="border-radius:12px; padding-right:8px; padding-bottom:8px" src="https://open.spotify.com/embed/playlist/70RrIIkKSiARJwyQXUv30k?utm_source=generator&theme=0" width="100%" height="100%" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
 
 
-Column {data-width=600}
+Column {data-width=700}
 -----------------------------------------------------------------------
 ### Clips used in the survey
-Table with the clips, song title, artist, culture, modernity, (spotify/human ratings?
-)
 
 ```{r}
-clip_table <- data.frame(
-  ID = seq(1,24),
-  Name = rep(c("John", "Jane", "Bob"), 8),
-  Audio = rep(c(
-    '<audio controls><source src="Clips/Unholy.mp3" type="audio/mp3"></audio>',
-    '<audio controls><source src="Clips/Taqaseem bayati.mp3" type="audio/mp3"></audio>',
-    '<audio controls><source src="Clips/瞬.mp3" type="audio/mp3"></audio>'
-  ), 8)
-)
+clip_table <- full_data
+clip_table$clip <- paste0('<audio controls><source src="Clips/', gsub("[\":]", "_", clip_table$track.name), '.mp3" type="audio/mp3"></audio>')
+clip_table <- rowid_to_column(clip_table, var = "id")
+
+clip_table <- clip_table[,c("id", "clip", "track.name", "artists", "culture", "modernity", "spotify.energy", "spotify.valence", "human.energy", "human.valence")]
 
 
-kable(clip_table, "html", escape=FALSE) |>
-  kable_styling(full_width = FALSE)
+kable(clip_table, "html", escape=FALSE, digits=3,
+      col.names = c("ID", "Clip used in the survey", "Track title", "Artists", "Culture", "Modernity", "Spotify Energy", "Spotify Valence", "Human Energy", "Human Valence")) |>
+  kable_styling()
 ```
-
-![](Clips/Unholy.mp3)
