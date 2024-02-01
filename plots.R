@@ -246,8 +246,7 @@ full_spdf <- merge(countries_spdf, combined_dists_country_culture, by.x = "NAME"
   merge(dists_by_country_and_culture[,-2], by.x = "NAME", by.y="country", all.x=TRUE)
 
 
-culture_hues <- c("Indian" = 274, "Chinese" = 3, "Arab" = 190, "Western" = 100)
-culture_lightness <- c("Indian" = .76, "Chinese" = .7, "Arab" = .74, "Western" = .68)
+culture_hues <- c("Indian" = 274, "Chinese" = 3, "Arab" = 190, "Western" = 90)
 
 map_colour_palette <- function (culture_str, total) 
 {
@@ -312,7 +311,7 @@ addPolygons_custom <- function(x, culture_str) {
       labels= colour_palette$labels,
       values=~full_spdf[[paste0("Distance.", culture_str)]],
       opacity=0.9,
-      title = "Total Rating Difference",
+      title = "Overall Difference",
       position = "bottomleft" )
 }
 
@@ -340,7 +339,6 @@ leaflet_widget <- leaflet(full_spdf) |>
          };
          updateLegend();
          window.addEventListener('load', () => {
-          console.log('helo again');
           updateLegend();
          });
          this.on('baselayerchange', el => updateLegend());

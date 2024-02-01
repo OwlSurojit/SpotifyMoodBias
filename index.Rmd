@@ -13,6 +13,7 @@ library(htmlwidgets)
 library(tidyverse)
 library(spotifyr)
 library(plotly)
+library(kableExtra)
 
 source("analysis.R")
 source("plots.R")
@@ -37,8 +38,14 @@ main_graph
 
 ### Explanation of the plots {data-height=300}
 
-The graph in the centre depicts the difference between human and Spotify ratings for energy and valence. The accuracy of Spotify ratings for valence was relatively the same for western and non-western music. However, contrary to our expectations, the Spotify ratings for energy were more precise for non-western music than for western music. Surprisingly, western traditional music had the least accurate rating while Indian traditional and Chinese contemporary music had the most accurate ratings.
-The maps on right depict the difference between human and Spotify ratings depending on the respondent's country of origin. People of Arabic descent rated Arabic music very differently compared to the Spotify ratings, potentially hinting at the Spotify API’s inaccuracy.
+The graph in the centre depicts the difference between the human and Spotify ratings for energy and valence, where the human ratings were calculated as the mean of all viable survey responses in the respective categories. More precisely the human ratings were subtracted from the Spotify ratings, so a positive difference in energy and a negative difference in valence, as with Chinese contemporary music for example, means that the survey respondents rated these songs less energetic but more emotionally positive. Both human and Spotify ratings lie on a scale between 0 and 1, so the differences theoretically live within $[-1, 1]$, although in practice no absolute values larger than $0.5$ were observed.
+The two-dimensional differences are shown in the scatter plot for each of the eight song categories. Furthermore an overall difference was also defined as the distance between the markers and the plot origin, i.e.
+$$ \texttt{Overall Difference} \;\;= \;\; \sqrt{\texttt{Valence Difference}^2 + \texttt{Energy Difference}^2} $$
+This value quantifies the overall inaccuracy of the Spotify energy and valence ratings. The bar chart which can be selected through the button in the top left plots these values for each of the eight categories.
+
+<!-- The accuracy of Spotify ratings for valence was relatively the same for western and non-western music. However, contrary to our expectations, the Spotify ratings for energy were more precise for non-western music than for western music. Surprisingly, western traditional music had the least accurate rating while Indian traditional and Chinese contemporary music had the most accurate ratings. -->
+The interactive maps on the right depict the overall difference between human and Spotify ratings depending on the respondents' birth country. There is one plot for each of the four music cultures studied, which can be toggled using the radio buttons on the top right. The higher the mean rating difference of all respondents from a specific country is the more saturated the shading of that country is in the plot. Note that the accuracy of these values highly depends on the number of responses received from that country. As the scope of this project did not allow for very comprehensive data collection on a global scale, there is only a few responses from each country, which does not allow for any significant conclusions. The exact number of respondents can be read when hovering over a country in the plot.
+<!-- People of Arabic descent rated Arabic music very differently compared to the Spotify ratings, potentially hinting at the Spotify API’s inaccuracy. -->
 
 
 Column {data-width=400}
@@ -49,8 +56,9 @@ leaflet_widget
 ```
 ### Test results {data-height=400}
 
-#### Overall accuracy
+The raw distances between the participants’ and Spotify’s ratings of energy and valence and the sum of those distances, representing total accuracy were scaled by converting them to z-scores. Z-scores describe each observation as its distance from the variable’s mean in standard deviations. The following analyses were conducted on scaled variables.
 
+#### Overall accuracy
 The main hypothesis that Spotify’s ratings would be less accurate for non-Western than Western songs was not supported. In actuality, an opposite effect was found: the ratings were more accurate for non-Western music (t(1543.1) = -2.64, p = .008), as shown with a Welsch independent-samples t-test.
 
 A closer investigation of at the differences in accuracy with a two-way ANOVA testing for differences across regions, traditionality and their interaction showed a main effect of region (F(3) = 6.79, p < .001) and a main effect of traditionality (F(1) = 12.55, p < .001), but no interaction effects between the two (F(3) = 1.20, p = .310). 
@@ -61,16 +69,16 @@ A follow-up Welsch t-test showed that the accuracy was higher for contemporary t
 
 To gain a more detailed understanding of the effects, the study assessed the accuracy in valence and energy ratings separately.
 
-
 #### Valence accuracy
+
 A Welsch independent-samples t-test showed that valence ratings were equally accurate for non-Western and Western songs (t(1660.2) = -1.88, p = .060).
 
 A two-way ANOVA testing for differences in valence ratings across regions, traditionality and their interaction found a main effect of region (F(3) = 4.07, p = .007) but no main effect of traditionality (F(1) = 0.90, p = .343). A significant interaction between region and traditionality was observed (F(3) = 2.72,  p = .043).
 
 Follow-up pairwise t-test were employed to test the differences in valence ratings’ accuracy across regions. At the Bonferroni-adjusted significance level of 0.83% no significant differences were found across regions.
 
-
 #### Energy accuracy
+
 Energy ratings were more accurate for non-Western than Western songs (t(1270.2) = -5.12, p < .001), as shown with a Welsch independent-samples t-test.
 
 A two-way ANOVA testing for differences in energy ratings across regions, traditionality and their interaction found a main effect of region (F(3) = 25.06, p = < .001) and main effect of traditionality (F(1) = 342.14, p < .001). Furthermore, a significant interaction between region and traditionality was present (F(3) = 28.23,  p < .001).
@@ -107,7 +115,7 @@ Lee, H., Hoeger, F., Schoenwiesner, M., Park, M., & Jacoby, N. (2021). [Cross-cu
 
 Vidas, D., McGovern, H. T., & Nitschinsk, L. (2021). [Culture and ideal affect: Cultural dimensions predict Spotify listening patterns](http://dx.doi.org/10.31234/osf.io/95w2t)
 
-Satayarak, N., & Benjangkaprasert, C. (2022, June). [On the Study of Thai Music Emotion Recognition Based on Western Music Model](http://dx.doi.org/10.1088/1742-6596/2261/1/012018) In Journal of Physics: Conference Series (Vol. 2261, No. 1, p. 012018). IOP Publishing.
+Satayarak, N., & Benjangkaprasert, C. (2022, June). [On the Study of Thai Music Emotion Recognition Based on Western Music Model](http://dx.doi.org/10.1088/1742-6596/2261/1/012018) In Journal of Physics: Conference Series (Vol. 2261, No. 1, p. 012018). IOP Publishing.
 
 Panda, R., Redinho, H., Gonçalves, C., Malheiro, R., & Paiva, R. P. (2021, July). [How does the spotify api compare to the music emotion recognition state-of-the-art?](https://zenodo.org/doi/10.5281/zenodo.5045099) In 18th Sound and Music Computing Conference (SMC 2021) (pp. 238-245). Axea sas/SMC Network.
 
@@ -116,6 +124,13 @@ Sangnark, S., Lertwatechakul, M., & Benjangkaprasert, C. (2018, October). [Thai 
 
 
 ### Discussion
+
+Our research investigated the accuracy of the Spotify API in ranking the energy and valence of Western and non-Western songs. Our findings suggest that Spotify's ranking accuracy is not consistent among different regions, and especially among classical and modern music. Overall, genres outside the Western mainstream resulted in lower accuracy, possibly due to Spotify's focus on Western music and user demographics. Supporting this outcome is the fact that the two least accurately ranked styles turned out to be Western classical and Chinese traditional music.
+
+Spotify is a western company with predominantly western user-base, therefore, from a marketing perspective, training the API to be as precise as possible on current popular music makes sense. However, this means that we also need to be careful at interpreting the values Spotify API puts out, as its main goal is not to create a database of songs full of accurate data that is viable for research, but to predict their user's musical taste in order to keep them satisfied with the product they are paying for.
+From an ethical standpoint, the Spotify API should strive for accuracy across all cultures and all genres to avoid perpetuating cultural biases and promote equal representation in music recommendation systems.
+
+Further research is needed to investigate the specific factors that influence Spotify to rank certain genres so differently compared to humans. This research, however, would require access to Spotify's internal data to understand the specificities of each factor, as well as the inner workings of the scales it ranks the songs on.
 
 
 ### Limitations
@@ -127,11 +142,11 @@ The bane of our study was to find out if there is a potential bias in regard to 
 
 #### Spotify unknown rating
 
-Another limitation we faced was correctly scaling up our 7-point likert scale and Spotify's rating of valence and energy on a scale ranging from 0 to 1. Despite the public access to the rating of each song, the method Spotify uses to calculate the actual values remains obscured. Therefore, the most challenging part was a measurement assumption. For this research, we assumed that the distances between values on the Spotify scale are weighted equally. This might not be the case, causing our results to be inaccurate.
+Another limitation we faced was correctly scaling up our 7-point likert scale and Spotify's rating of valence and energy on a scale ranging from 0 to 1. Despite the public access to the rating of each song, the method Spotify uses to calculate the actual values remains obscured. Therefore, the most challenging part was a measurement assumption. For this research, we assumed that the distances between values on the Spotify scale are weighted equally. This might not be the case, potentially causing our results to be inaccurate.
 
 #### Length of Survey
 
-In an ideal setting, we would be able to play the full songs to the participants, and not only 15 second snippets we had to resort to with the aim of keeping the questionnaire under 15 minutes long. The limitation here is that Spotify ranks both valence and energy as an average calculated from a whole song, while our participants had only 15  pre-selected seconds to rate each song. Therefore, our selected clip might not be representative of the whole song, causing deviation from the accuracy of measurements.
+In an ideal setting, we would be able to play the full songs to the participants, and not only 15 second snippets we had to resort to with the aim of keeping the questionnaire under 15 minutes long. The limitation here is that Spotify ranks both valence and energy as an average calculated from a whole song, while our participants had only 15 pre-selected seconds to rate each song. While we tried our best to select a representative clip, this might still cause the accuracy of the measurements to deviate.
 
 
 
@@ -167,3 +182,21 @@ Column {data-width=600}
 ### Clips used in the survey
 Table with the clips, song title, artist, culture, modernity, (spotify/human ratings?
 )
+
+```{r}
+clip_table <- data.frame(
+  ID = seq(1,24),
+  Name = rep(c("John", "Jane", "Bob"), 8),
+  Audio = rep(c(
+    '<audio controls><source src="Clips/Unholy.mp3" type="audio/mp3"></audio>',
+    '<audio controls><source src="Clips/Taqaseem bayati.mp3" type="audio/mp3"></audio>',
+    '<audio controls><source src="Clips/瞬.mp3" type="audio/mp3"></audio>'
+  ), 8)
+)
+
+
+kable(clip_table, "html", escape=FALSE) |>
+  kable_styling(full_width = FALSE)
+```
+
+![](Clips/Unholy.mp3)
